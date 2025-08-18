@@ -39,7 +39,7 @@ google:
     cx: ${GOOGLE_SEARCH_ENGINE_ID:${GOOGLE_CX:}}
 
 jwt:
-  secret: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationInMediWebApplication}
+  secret: ${JWT_SECRET}
   expiration: 86400000 # 24 hours in milliseconds
 
 server:

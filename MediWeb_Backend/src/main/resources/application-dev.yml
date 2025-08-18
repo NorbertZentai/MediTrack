@@ -2,39 +2,36 @@ spring:
   application:
     name: MediTrack
   config:
-    import: optional:dotenv:./.env
+    import: optional:dotenv:./.env,optional:dotenv:./.env.development
   devtools:
-    restart:
-      enabled: false
-    livereload:
-      enabled: false
+    restart.enabled: false
+    livereload.enabled: false
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: 96nucu@gmail.com
-    password: "ickt jfev cwum nwwc"
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
-
   datasource:
-    url: jdbc:postgresql://localhost:5432/meditrack
-    username: postgres
-    password: postgres
-
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/meditrack}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: update
     properties:
-      hibernate.jdbc.lob.non_contextual_creation: true
       hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
     show-sql: false
-
   sql:
     init:
       mode: always
@@ -44,24 +41,33 @@ spring:
 logging:
   level:
     root: info
-    org.springframework.web: warn
-    org.hibernate: error
+    "org.springframework.web": warn
+    "org.hibernate": error
 
+# custom external API config
 google:
   api:
-    key: AIzaSyBpga8dPvEK8MT9BEQAvz5KTqERG7O5pVg
-    cx: e4eac0f33ac7c4a2c
+    key: ${GOOGLE_API_KEY:}
+    cx: ${GOOGLE_CX:}
 
 server:
   servlet:
     session:
       cookie:
-        secure: true
+        secure: false
         http-only: true
-        same-site: Strict
+        same-site: LAX
 
+# web push config
 push:
   vapid:
-    public-key: "BIL6J5Na_R5qzpqEENhz7bHHQ47M9pyiC9SkPHgAqIQQxhvvUL_nQDsGUehKy5Tt0VDnIfj_1hCdu3W2soV2MkU"
-    private-key: "zhKoIjhZ9bEXWZV06fEaMyR7V47Fo1UzKyhdgxE-Z5U"
-    subject: "mailto:admin@localhost"
+    public-key: ${PUSH_VAPID_PUBLIC_KEY:}
+    private-key: ${PUSH_VAPID_PRIVATE_KEY:}
+    subject: ${PUSH_VAPID_SUBJECT:mailto:admin@localhost}
+
+# cors policy (custom binding class expected)
+cors:
+  allowed-origins:
+    - http://localhost:3000
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"

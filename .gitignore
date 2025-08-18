@@ -58,6 +58,7 @@ out/
 # Environment / secret files
 .env
 .env.*
+!*.example
 # Spring fő konfigurációk mostantól verziózva (ne tegyél bele érzékeny titkot!)
 application.properties
 !application.yml
