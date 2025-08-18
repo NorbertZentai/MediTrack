@@ -1,0 +1,91 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "FE: install",
+      "type": "shell",
+      "command": "npm ci",
+      "options": { "cwd": "${workspaceFolder}/MediWeb_Frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "FE: dev",
+      "type": "shell",
+      "command": "npm run start",
+      "options": { "cwd": "${workspaceFolder}/MediWeb_Frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "FE: build",
+      "type": "shell",
+      "command": "npm run build",
+      "options": { "cwd": "${workspaceFolder}/MediWeb_Frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "FE: test",
+      "type": "shell",
+      "command": "npm test -- --watchAll=false",
+      "options": { "cwd": "${workspaceFolder}/MediWeb_Frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "FE: typecheck",
+      "type": "shell",
+      "command": "npx tsc --noEmit",
+      "options": { "cwd": "${workspaceFolder}/MediWeb_Frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "BE: mvn install",
+      "type": "shell",
+      "command": "./mvnw clean install -DskipTests",
+      "options": { "cwd": "${workspaceFolder}/MediWeb_Backend" },
+  "problemMatcher": []
+    },
+    {
+      "label": "BE: run (dev profile)",
+      "type": "shell",
+      "command": "./mvnw spring-boot:run -Dspring-boot.run.profiles=dev",
+      "options": { "cwd": "${workspaceFolder}/MediWeb_Backend" },
+  "problemMatcher": []
+    },
+    {
+      "label": "BE: test",
+      "type": "shell",
+      "command": "./mvnw test",
+      "options": { "cwd": "${workspaceFolder}/MediWeb_Backend" },
+  "problemMatcher": []
+    },
+    {
+      "label": "DB: up (dev)",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.dev.yml up -d",
+      "options": { "cwd": "${workspaceFolder}" }
+    },
+    {
+      "label": "DB: down (dev)",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.dev.yml down",
+      "options": { "cwd": "${workspaceFolder}" }
+    },
+    {
+      "label": "Dev: start all",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "DB: up (dev)",
+        "BE: run (dev profile)",
+        "FE: dev"
+      ]
+    },
+    {
+      "label": "Quality: all tests",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "BE: test",
+        "FE: test",
+        "FE: typecheck"
+      ]
+    }
+  ]
+}

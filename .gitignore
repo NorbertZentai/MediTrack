@@ -20,6 +20,7 @@ ios/
 
 # VSCode
 .vscode/
+!.vscode/tasks.json
 *.code-workspace
 
 # macOS / Windows rendszerfájlok
@@ -57,11 +58,12 @@ out/
 # Environment / secret files
 .env
 .env.*
+# Spring fő konfigurációk mostantól verziózva (ne tegyél bele érzékeny titkot!)
 application.properties
-application.yml
-application-dev.yml
-application-prod.yml
-application-local.yml
+!application.yml
+!application-dev.yml
+!application-prod.yml
+!application-local.yml
 
 # Docker
 **/docker-compose.override.yml
