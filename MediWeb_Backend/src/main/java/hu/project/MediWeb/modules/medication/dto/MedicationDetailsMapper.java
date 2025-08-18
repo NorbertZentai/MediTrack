@@ -4,11 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.project.MediWeb.modules.medication.entity.Medication;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 
 public class MedicationDetailsMapper {
 
     private static final ObjectMapper mapper = new ObjectMapper();
+    private static final Logger log = LoggerFactory.getLogger(MedicationDetailsMapper.class);
 
     public static Medication toEntity(Long id, MedicationDetailsResponse dto) {
         try {
@@ -37,8 +40,7 @@ public class MedicationDetailsMapper {
                     .hazipatikaJson(mapper.writeValueAsString(dto.getHazipatikaInfo()))
                     .build();
         } catch (JsonProcessingException e) {
-            System.err.println("❌ [MAPPER] Error converting DTO to Entity: " + e.getMessage());
-            e.printStackTrace();
+            log.error("mapper.toEntity.error msg={}", e.getMessage(), e);
             throw new RuntimeException("Hiba DTO-ból Entity konvertálás közben", e);
         }
     }

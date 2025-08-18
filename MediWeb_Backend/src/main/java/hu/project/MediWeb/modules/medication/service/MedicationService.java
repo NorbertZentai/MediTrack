@@ -60,7 +60,7 @@ public class MedicationService {
             log.debug("medication.details.name id={} name={}", itemId, name);
 
             Element topTable = doc.selectFirst(".gy-content__top-table");
-            System.out.println("📋 [MED-SERVICE] Processing medication details table for ID: " + itemId);
+            log.trace("medication.details.table.start id={}", itemId);
 
         String regNum = textFromTitle(topTable, "Nyilvántartási szám");
         String substance = textFromTitle(topTable, "Hatóanyag");

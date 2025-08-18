@@ -2,6 +2,8 @@ package hu.project.MediWeb.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +12,8 @@ import java.util.Date;
 
 @Component
 public class JwtUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
 
     @Value("${jwt.secret:mySecretKeyForJWTTokenGenerationInMediWebApplicationThatIsLongEnoughForHMACAlgorithm}")
     private String jwtSecret;
@@ -52,13 +56,13 @@ public class JwtUtil {
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(authToken);
             return true;
         } catch (MalformedJwtException e) {
-            System.err.println("Invalid JWT token: " + e.getMessage());
+            log.warn("jwt.validate.invalid msg={}", e.getMessage());
         } catch (ExpiredJwtException e) {
-            System.err.println("JWT token is expired: " + e.getMessage());
+            log.info("jwt.validate.expired msg={}", e.getMessage());
         } catch (UnsupportedJwtException e) {
-            System.err.println("JWT token is unsupported: " + e.getMessage());
+            log.warn("jwt.validate.unsupported msg={}", e.getMessage());
         } catch (IllegalArgumentException e) {
-            System.err.println("JWT claims string is empty: " + e.getMessage());
+            log.warn("jwt.validate.empty-claims msg={}", e.getMessage());
         }
         return false;
     }
