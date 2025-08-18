@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -24,38 +26,38 @@ public class MedicationService {
     private final GoogleImageService googleImageService;
     private final MedicationRepository medicationRepository;
     private final HazipatikaSearchService hazipatikaSearchService;
+    private static final Logger log = LoggerFactory.getLogger(MedicationService.class);
 
     public MedicationDetailsResponse getMedicationDetails(Long itemId) throws Exception {
-        System.out.println("🔍 [MED-SERVICE] Starting getMedicationDetails for ID: " + itemId);
-        
+        log.debug("medication.details.start id={}", itemId);
         try {
-            System.out.println("📊 [MED-SERVICE] Checking database for existing medication with ID: " + itemId);
+            log.debug("medication.details.check-cache id={}", itemId);
             Optional<Medication> optional = medicationRepository.findById(itemId);
             
             if (optional.isPresent()) {
-                System.out.println("✅ [MED-SERVICE] Found existing medication in database for ID: " + itemId);
+                log.debug("medication.details.cache-hit id={}", itemId);
                 Medication medication = optional.get();
 
                 if (medication.getLastUpdated() != null && medication.getLastUpdated().isAfter(LocalDate.now().minusDays(7))) {
-                    System.out.println("✅ [MED-SERVICE] Medication is fresh (< 7 days), returning cached data for ID: " + itemId);
+                    log.info("medication.details.return-cached id={} ageDays<7", itemId);
                     return MedicationDetailsMapper.toDto(medication);
                 }
 
-                System.out.println("🗑️ [MED-SERVICE] Medication is stale (>= 7 days), deleting and re-fetching for ID: " + itemId);
+                log.info("medication.details.stale-refresh id={}", itemId);
                 medicationRepository.deleteById(itemId);
             } else {
-                System.out.println("❌ [MED-SERVICE] No existing medication found in database for ID: " + itemId);
+                log.debug("medication.details.cache-miss id={}", itemId);
             }
 
-            System.out.println("🌐 [MED-SERVICE] Fetching fresh data from OGYEI website for ID: " + itemId);
+            log.info("medication.details.fetch.remote id={}", itemId);
             String url = "https://ogyei.gov.hu/gyogyszeradatbazis&action=show_details&item=" + itemId;
-            System.out.println("🔗 [MED-SERVICE] URL: " + url);
+            log.debug("medication.details.fetch.url id={} url={}", itemId, url);
             
             Document doc = Jsoup.connect(url).get();
-            System.out.println("✅ [MED-SERVICE] Successfully fetched HTML from OGYEI for ID: " + itemId);
+            log.debug("medication.details.fetch.success id={}", itemId);
 
             String name = doc.selectFirst("h3.gy-content__title").text();
-            System.out.println("📝 [MED-SERVICE] Extracted medication name: " + name + " for ID: " + itemId);
+            log.debug("medication.details.name id={} name={}", itemId, name);
 
             Element topTable = doc.selectFirst(".gy-content__top-table");
             System.out.println("📋 [MED-SERVICE] Processing medication details table for ID: " + itemId);
@@ -78,13 +80,13 @@ public class MedicationService {
         String smpcUrl = getDocUrl(topTable, "alkalmazási előírás");
         String labelUrl = getDocUrl(topTable, "cimkeszöveg");
 
-        System.out.println("🔍 [MED-SERVICE] Processing substitutes section for ID: " + itemId);
+    log.trace("medication.details.substitutes.start id={}", itemId);
         List<SubstituteMedication> substitutes = doc.select("#substitution .table__line.line").stream()
                 .map(line -> {
                     try {
                         var cells = line.select("div.cell");
                         if (cells.size() < 2) {
-                            System.out.println("⚠️ [MED-SERVICE] Not enough cells in substitute line, skipping");
+                            log.warn("medication.details.substitute.skip id={} reason=insufficient-cells", itemId);
                             return null;
                         }
                         
@@ -99,20 +101,20 @@ public class MedicationService {
                         }
                         return new SubstituteMedication(substituteMedicationName, substituteMedicationRegNum, id);
                     } catch (Exception e) {
-                        System.err.println("❌ [MED-SERVICE] Error processing substitute line: " + e.getMessage());
+                        log.error("medication.details.substitute.error id={} msg={}", itemId, e.getMessage());
                         return null;
                     }
                 })
                 .filter(substitute -> substitute != null)
                 .toList();
 
-        System.out.println("🔍 [MED-SERVICE] Processing packages section for ID: " + itemId);
+    log.trace("medication.details.packages.start id={}", itemId);
         List<PackageInfo> packages = doc.select("#packsizes .table__line.line").stream()
                 .map(line -> {
                     try {
                         List<Element> cells = line.select(".cell");
                         if (cells.size() < 5) {
-                            System.out.println("⚠️ [MED-SERVICE] Not enough cells in package line, skipping");
+                            log.warn("medication.details.package.skip id={} reason=insufficient-cells", itemId);
                             return null;
                         }
                         return new PackageInfo(
@@ -123,7 +125,7 @@ public class MedicationService {
                                 cells.get(4).text()
                         );
                     } catch (Exception e) {
-                        System.err.println("❌ [MED-SERVICE] Error processing package line: " + e.getMessage());
+                        log.error("medication.details.package.error id={} msg={}", itemId, e.getMessage());
                         return null;
                     }
                 })
@@ -139,11 +141,13 @@ public class MedicationService {
         List<FinalSampleApproval> finalSamples = extractFinalSampleApprovals(doc);
         List<DefectiveFormApproval> defectiveForms = extractDefectiveForms(doc);
 
-        String imageUrl = googleImageService
-                .searchImages(name)
-                .map(result -> result != null ? result.link() : null)
-                .blockOptional()
-                .orElse(null);
+        String imageUrl = null;
+        try {
+            var img = googleImageService.searchImages(name);
+            imageUrl = img != null ? img.link() : null;
+        } catch (Exception e) {
+            log.warn("medication.details.image.error id={} msg={}", itemId, e.getMessage());
+        }
 
         HazipatikaResponse hazipatikaInfo = hazipatikaSearchService.searchMedication(name);
 
@@ -172,39 +176,33 @@ public class MedicationService {
                 .build();
 
         Medication entity = MedicationDetailsMapper.toEntity(itemId, response);
-        System.out.println("💾 [MED-SERVICE] Attempting to save medication entity to database for ID: " + itemId);
+    log.debug("medication.details.persist.start id={}", itemId);
         saveIfNotExists(entity);
-        System.out.println("✅ [MED-SERVICE] Successfully completed getMedicationDetails for ID: " + itemId);
+    log.info("medication.details.success id={} name={} imagePresent={}", itemId, name, imageUrl != null);
 
         return response;
     } catch (Exception e) {
-        System.err.println("❌ [MED-SERVICE] Exception in getMedicationDetails for ID: " + itemId);
-        System.err.println("❌ [MED-SERVICE] Exception type: " + e.getClass().getSimpleName());
-        System.err.println("❌ [MED-SERVICE] Exception message: " + e.getMessage());
-        e.printStackTrace();
+        log.error("medication.details.error id={} type={} msg={}", itemId, e.getClass().getSimpleName(), e.getMessage(), e);
         throw e;
     }
     }
 
     @Transactional
     public void saveIfNotExists(Medication medication) {
-        System.out.println("💾 [MED-SERVICE] saveIfNotExists called for medication ID: " + medication.getId());
+    log.trace("medication.persist.check id={}", medication.getId());
         try {
             if (!medicationRepository.existsById(medication.getId())) {
-                System.out.println("💾 [MED-SERVICE] Medication does not exist, saving new record for ID: " + medication.getId());
+        log.debug("medication.persist.insert id={}", medication.getId());
                 if (medication.getLastUpdated() == null) {
                     medication.setLastUpdated(LocalDate.now());
                 }
                 medicationRepository.save(medication);
-                System.out.println("✅ [MED-SERVICE] Successfully saved medication to database for ID: " + medication.getId());
+        log.info("medication.persist.success id={}", medication.getId());
             } else {
-                System.out.println("ℹ️ [MED-SERVICE] Medication already exists, skipping save for ID: " + medication.getId());
+        log.debug("medication.persist.skip.exists id={}", medication.getId());
             }
         } catch (Exception e) {
-            System.err.println("❌ [MED-SERVICE] Error saving medication for ID: " + medication.getId());
-            System.err.println("❌ [MED-SERVICE] Save error type: " + e.getClass().getSimpleName());
-            System.err.println("❌ [MED-SERVICE] Save error message: " + e.getMessage());
-            e.printStackTrace();
+        log.error("medication.persist.error id={} type={} msg={}", medication.getId(), e.getClass().getSimpleName(), e.getMessage(), e);
             throw e;
         }
     }
