@@ -46,14 +46,9 @@ public class FavoriteController {
         }
 
         Long currentUserId = currentUser.getId();
-        List<FavoriteDTO> favorites = favoriteService.findByUserId(currentUserId).stream()
-                .map(fav -> FavoriteDTO.builder()
-                        .id(fav.getId())
-                        .userId(currentUserId)
-                        .medicationId(fav.getMedication().getId())
-                        .medicationName(fav.getMedication().getName())
-                        .build())
-                .toList();
+    List<FavoriteDTO> favorites = favoriteService.findByUserId(currentUserId).stream()
+        .map(FavoriteDTO::from)
+        .toList();
         return ResponseEntity.ok(favorites);
     }
 
@@ -65,12 +60,7 @@ public class FavoriteController {
         }
 
         Favorite favorite = favoriteService.addFavorite(currentUser, medicationId);
-        FavoriteDTO dto = FavoriteDTO.builder()
-                .id(favorite.getId())
-                .userId(currentUser.getId())
-                .medicationId(favorite.getMedication().getId())
-                .medicationName(favorite.getMedication().getName())
-                .build();
+    FavoriteDTO dto = FavoriteDTO.from(favorite);
         return ResponseEntity.ok(dto);
     }
 
