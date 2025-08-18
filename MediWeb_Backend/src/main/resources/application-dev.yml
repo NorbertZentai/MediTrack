@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: MediTrack
+  config:
+    import: optional:dotenv:./.env
+  devtools:
+    restart:
+      enabled: false
+    livereload:
+      enabled: false
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: 96nucu@gmail.com
+    password: "ickt jfev cwum nwwc"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/meditrack
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate.jdbc.lob.non_contextual_creation: true
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+      data-locations: classpath:db/data.sql
+
+logging:
+  level:
+    root: info
+    org.springframework.web: warn
+    org.hibernate: error
+
+google:
+  api:
+    key: AIzaSyBpga8dPvEK8MT9BEQAvz5KTqERG7O5pVg
+    cx: e4eac0f33ac7c4a2c
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+        http-only: true
+        same-site: Strict
+
+push:
+  vapid:
+    public-key: "BIL6J5Na_R5qzpqEENhz7bHHQ47M9pyiC9SkPHgAqIQQxhvvUL_nQDsGUehKy5Tt0VDnIfj_1hCdu3W2soV2MkU"
+    private-key: "zhKoIjhZ9bEXWZV06fEaMyR7V47Fo1UzKyhdgxE-Z5U"
+    subject: "mailto:admin@localhost"

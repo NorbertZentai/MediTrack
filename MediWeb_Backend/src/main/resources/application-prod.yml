@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: MediWeb
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:jdbc:postgresql://localhost:5432/mediweb_db}}
+    username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:mediweb_user}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD:password}}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    show-sql: false
+
+  sql:
+    init:
+      mode: never
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+google:
+  api:
+    key: ${GOOGLE_API_KEY:}
+    cx: ${GOOGLE_SEARCH_ENGINE_ID:${GOOGLE_CX:}}
+
+jwt:
+  secret: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationInMediWebApplication}
+  expiration: 86400000 # 24 hours in milliseconds
+
+server:
+  port: ${PORT:8080}
+
+# CORS configuration for frontend
+cors:
+  allowed-origins: 
+    - https://mediweb-frontend.onrender.com
+    - http://localhost:3000
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
