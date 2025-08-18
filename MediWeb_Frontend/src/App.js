@@ -1,24 +1,18 @@
+// Expo Router használata esetén a bejegyzés fájl csak a provide-erekért felel
 import { AuthProvider } from 'contexts/AuthContext';
-import AppRouter from 'routes/AppRouter';
 import { ToastProvider } from 'components/ToastProvider';
 import { usePushNotifications } from 'features/notification/usePushNotifications';
-import "styles/App.css";
+import 'styles/App.css';
+import { Slot } from 'expo-router';
 
-// Component that uses the push notifications hook inside AuthProvider
-function AppWithNotifications() {
+export default function RootAppProviders() {
   usePushNotifications();
-  
-  return (
-    <ToastProvider>
-      <AppRouter />
-    </ToastProvider>
-  );
-}
-
-export default function App() {
   return (
     <AuthProvider>
-      <AppWithNotifications />
+      <ToastProvider>
+        {/* Slot rendereli az aktuális route-ot a file-based routing szerint */}
+        <Slot />
+      </ToastProvider>
     </AuthProvider>
   );
 }

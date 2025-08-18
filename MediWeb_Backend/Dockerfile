@@ -1,24 +1,33 @@
-## Backend Docker image (single-stage for now; multi-stage optimization is a later step)
-FROM eclipse-temurin:17-jdk
+############### BUILD STAGE ###############
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /workspace
 
+# Copy pom first for better dependency layer caching
+COPY pom.xml .
+RUN mvn -q -e -DskipTests dependency:go-offline
+
+# Copy sources
+COPY src ./src
+
+# Build application (skip tests - run them in CI beforehand)
+RUN mvn -q clean package -DskipTests
+
+############### RUNTIME STAGE ###############
+FROM eclipse-temurin:17-jre AS runtime
 WORKDIR /app
 
-## Install Maven (used only at build time inside this image)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends maven \
-    && rm -rf /var/lib/apt/lists/*
+# Add non-root user for security
+RUN useradd -u 10001 -m spring
 
-## Copy project sources
-COPY . .
-
-## Build (tests skipped here; run tests in CI before building the image)
-RUN mvn -q clean package -DskipTests
+# Copy built artifact only
+COPY --from=build /workspace/target/*.jar app.jar
 
 EXPOSE 8080
 
-## Allow runtime JVM / Spring tuning via JAVA_OPTS env
+# JVM / Spring tuning via JAVA_OPTS, allow profile override
 ENV JAVA_OPTS=""
+ENV SPRING_PROFILES_ACTIVE=prod
 
-## Runtime: rely on environment variables (SPRING_PROFILES_ACTIVE, SPRING_DATASOURCE_*, etc.)
-## Secrets MUST NOT be hardcoded in the image. Provide them at run/deploy time.
-CMD ["sh", "-c", "java $JAVA_OPTS -jar target/*.jar"]
+USER spring
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
