@@ -1,6 +1,8 @@
 package hu.project.MediWeb.modules.user.controller;
 
 import hu.project.MediWeb.modules.user.dto.UserDTO;
+import hu.project.MediWeb.modules.user.dto.UserPublicDTO;
+import hu.project.MediWeb.modules.user.dto.AuthLoginResponse;
 import hu.project.MediWeb.modules.user.entity.User;
 import hu.project.MediWeb.modules.user.service.AuthService;
 import hu.project.MediWeb.security.JwtUtil;
@@ -33,40 +35,18 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<User> registerUser(@RequestBody User user) {
-        try {
-            return ResponseEntity.ok(authService.register(user));
-        } catch (Exception e) {
-            System.err.println("Registration error: " + e.getMessage());
-            throw e;
-        }
+    public ResponseEntity<UserPublicDTO> registerUser(@RequestBody User user) {
+        User saved = authService.register(user);
+        return ResponseEntity.ok(UserPublicDTO.from(saved));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> loginUser(@RequestBody Map<String, String> credentials) {
-        try {
-            String username = credentials.get("email");
-            String password = credentials.get("password");
-
-            System.out.println("🔑 Login attempt for email: " + username);
-
-            User user = authService.login(username, password);
-            String jwtToken = jwtUtil.generateJwtToken(user.getEmail());
-
-            // Create response with user data and JWT token
-            Map<String, Object> response = new HashMap<>();
-            response.put("user", user);
-            response.put("token", jwtToken);
-            response.put("type", "Bearer");
-
-            System.out.println("🔑 JWT token generated for user: " + user.getEmail());
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            System.err.println("Login error: " + e.getMessage());
-            e.printStackTrace();
-            throw e;
-        }
+    public ResponseEntity<AuthLoginResponse> loginUser(@RequestBody Map<String, String> credentials) {
+        String username = credentials.get("email");
+        String password = credentials.get("password");
+        User user = authService.login(username, password);
+        String jwtToken = jwtUtil.generateJwtToken(user.getEmail());
+        return ResponseEntity.ok(new AuthLoginResponse(UserPublicDTO.from(user), jwtToken, "Bearer"));
     }
 
     @GetMapping("/me")

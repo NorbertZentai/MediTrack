@@ -4,6 +4,7 @@ import hu.project.MediWeb.modules.user.entity.User;
 import hu.project.MediWeb.modules.user.enums.UserRole;
 import hu.project.MediWeb.modules.user.service.UserService;
 import hu.project.MediWeb.modules.user.dto.PasswordChangeRequest;
+import hu.project.MediWeb.modules.user.dto.UserPublicDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,13 +37,13 @@ public class UserController {
     }
 
     @GetMapping
-    public List<User> getAllUsers() {
-        return userService.findAllUsers();
+    public List<UserPublicDTO> getAllUsers() {
+        return userService.findAllUsers().stream().map(UserPublicDTO::from).toList();
     }
 
     @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userService.saveUser(user);
+    public UserPublicDTO createUser(@RequestBody User user) {
+        return UserPublicDTO.from(userService.saveUser(user));
     }
 
 
@@ -105,9 +106,9 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
+    public UserPublicDTO getUserById(@PathVariable Long id) {
         Optional<User> user = userService.findUserById(id);
-        return user.orElse(null);
+        return user.map(UserPublicDTO::from).orElse(null);
     }
 
     @DeleteMapping("/{id}")
@@ -116,7 +117,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}/role")
-    public User updateUserRole(@PathVariable Long id, @RequestParam("role") String role) {
-        return userService.updateUserRole(id, UserRole.valueOf(role.toUpperCase()));
+    public UserPublicDTO updateUserRole(@PathVariable Long id, @RequestParam("role") String role) {
+        return UserPublicDTO.from(userService.updateUserRole(id, UserRole.valueOf(role.toUpperCase())));
     }
 }
