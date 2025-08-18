@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -21,7 +20,7 @@ public class GoogleImageSearchController {
     }
 
     @GetMapping
-    public Mono<GoogleImageResult> search(@RequestParam String q) {
+    public GoogleImageResult search(@RequestParam String q) {
         return svc.searchImages(q);
     }
 

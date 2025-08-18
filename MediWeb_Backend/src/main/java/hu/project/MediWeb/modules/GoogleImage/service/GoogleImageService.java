@@ -5,8 +5,9 @@ import hu.project.MediWeb.modules.GoogleImage.dto.GoogleImageResult;
 import hu.project.MediWeb.modules.GoogleImage.dto.GoogleSearchResponse;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.RestTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.annotation.PostConstruct;
 import java.util.Comparator;
@@ -14,86 +15,41 @@ import java.util.Comparator;
 @Service
 public class GoogleImageService {
 
-    private final WebClient webClient;
+    private final RestTemplate restTemplate = new RestTemplate();
     private final GoogleConfig googleConfig;
+    private static final Logger log = LoggerFactory.getLogger(GoogleImageService.class);
 
-    public GoogleImageService(GoogleConfig googleConfig) {
-        this.googleConfig = googleConfig;
-        this.webClient = WebClient.builder()
-                .baseUrl("https://www.googleapis.com/customsearch/v1")
-                .build();
-    }
+    public GoogleImageService(GoogleConfig googleConfig) { this.googleConfig = googleConfig; }
 
     @PostConstruct
     public void init() {
-        System.out.println("🚀 [GOOGLE-IMG] === Service Initialization ===");
-        googleConfig.logConfiguration();
-        System.out.println("🚀 [GOOGLE-IMG] Google API Key configured: " + (googleConfig.getKey() != null && !googleConfig.getKey().isEmpty()));
-        System.out.println("🚀 [GOOGLE-IMG] Google CX configured: " + (googleConfig.getCx() != null && !googleConfig.getCx().isEmpty()));
-        if (googleConfig.getKey() != null && !googleConfig.getKey().isEmpty()) {
-            System.out.println("🚀 [GOOGLE-IMG] API Key starts with: " + googleConfig.getKey().substring(0, Math.min(10, googleConfig.getKey().length())) + "...");
-        } else {
-            System.out.println("🚀 [GOOGLE-IMG] API Key is null or empty");
-        }
-        if (googleConfig.getCx() != null && !googleConfig.getCx().isEmpty()) {
-            System.out.println("🚀 [GOOGLE-IMG] CX value: " + googleConfig.getCx());
-        } else {
-            System.out.println("🚀 [GOOGLE-IMG] CX is null or empty");
-        }
-        System.out.println("🚀 [GOOGLE-IMG] === End Initialization ===");
+        log.info("[GOOGLE-IMG] init keyPresent={} cxPresent={}", safeHas(googleConfig.getKey()), safeHas(googleConfig.getCx()));
     }
 
-    public Mono<GoogleImageResult> searchImages(String query) {
-        // Detailed logging for Google API credentials debugging
-        System.out.println("🔍 [GOOGLE-IMG] === Google API Configuration Debug ===");
-        System.out.println("🔍 [GOOGLE-IMG] Query: " + query);
-        System.out.println("🔍 [GOOGLE-IMG] API Key present: " + (googleConfig.getKey() != null));
-        System.out.println("🔍 [GOOGLE-IMG] API Key length: " + (googleConfig.getKey() != null ? googleConfig.getKey().length() : 0));
-        System.out.println("🔍 [GOOGLE-IMG] API Key starts with: " + (googleConfig.getKey() != null && googleConfig.getKey().length() > 10 ? googleConfig.getKey().substring(0, 10) + "..." : "null"));
-        System.out.println("🔍 [GOOGLE-IMG] CX present: " + (googleConfig.getCx() != null));
-        System.out.println("🔍 [GOOGLE-IMG] CX length: " + (googleConfig.getCx() != null ? googleConfig.getCx().length() : 0));
-        System.out.println("🔍 [GOOGLE-IMG] CX value: " + (googleConfig.getCx() != null ? googleConfig.getCx() : "null"));
-        System.out.println("🔍 [GOOGLE-IMG] === End Debug ===");
-        
-        // Check if Google API credentials are configured
-        if (googleConfig.getKey() == null || googleConfig.getKey().isEmpty() ||
-            googleConfig.getCx() == null || googleConfig.getCx().isEmpty()) {
-            System.out.println("❌ [GOOGLE-IMG] API credentials not configured, skipping image search for: " + query);
-            if (googleConfig.getKey() == null || googleConfig.getKey().isEmpty()) {
-                System.out.println("❌ [GOOGLE-IMG] Missing or empty API Key");
-            }
-            if (googleConfig.getCx() == null || googleConfig.getCx().isEmpty()) {
-                System.out.println("❌ [GOOGLE-IMG] Missing or empty Search Engine CX");
-            }
-            return Mono.empty();
+    public GoogleImageResult searchImages(String query) {
+        log.debug("[GOOGLE-IMG] search query='{}' keyPresent={} cxPresent={}", query, safeHas(googleConfig.getKey()), safeHas(googleConfig.getCx()));
+        if (missing(googleConfig.getKey()) || missing(googleConfig.getCx())) {
+            log.warn("[GOOGLE-IMG] credentials missing query='{}'", query);
+            return null;
         }
-
-        System.out.println("🔍 [GOOGLE-IMG] Searching images for: " + query);
-        return webClient.get()
-                .uri(uriBuilder ->
-                        uriBuilder
-                                .queryParam("key", googleConfig.getKey())
-                                .queryParam("cx", googleConfig.getCx())
-                                .queryParam("searchType", "image")
-                                .queryParam("num", 5)
-                                .queryParam("q", query)
-                                .build()
-                )
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(GoogleSearchResponse.class)
-                .map(resp -> {
-                    System.out.println("✅ [GOOGLE-IMG] Successfully found images for: " + query);
-                    return resp.items().stream()
-                            .map(item -> new GoogleImageResult(item.title(), item.link()))
-                            .max(Comparator.comparingInt(image -> score(query, image)))
-                            .orElse(null);
-                })
-                .onErrorResume(error -> {
-                    System.err.println("❌ [GOOGLE-IMG] Error searching images for: " + query);
-                    System.err.println("❌ [GOOGLE-IMG] Error: " + error.getMessage());
-                    return Mono.empty();
-                });
+        try {
+            String url = String.format("https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&searchType=image&num=5&q=%s",
+                    googleConfig.getKey(), googleConfig.getCx(), encode(query));
+            GoogleSearchResponse resp = restTemplate.getForObject(url, GoogleSearchResponse.class);
+            if (resp == null || resp.items() == null) {
+                log.info("[GOOGLE-IMG] no results query='{}'", query);
+                return null;
+            }
+            GoogleImageResult best = resp.items().stream()
+                    .map(item -> new GoogleImageResult(item.title(), item.link()))
+                    .max(Comparator.comparingInt(image -> score(query, image)))
+                    .orElse(null);
+            log.info("[GOOGLE-IMG] success query='{}' found={} ", query, best != null);
+            return best;
+        } catch (Exception e) {
+            log.error("[GOOGLE-IMG] error query='{}' msg={}", query, e.getMessage());
+            return null;
+        }
     }
 
     private int score(String query, GoogleImageResult image) {
@@ -114,4 +70,8 @@ public class GoogleImageService {
 
         return score;
     }
+
+    private boolean missing(String v) { return v == null || v.isEmpty(); }
+    private boolean safeHas(String v) { return v != null && !v.isEmpty(); }
+    private String encode(String q) { return q.replace(" ", "+"); }
 }
