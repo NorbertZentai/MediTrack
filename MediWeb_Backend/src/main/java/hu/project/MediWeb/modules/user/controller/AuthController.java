@@ -3,16 +3,20 @@ package hu.project.MediWeb.modules.user.controller;
 import hu.project.MediWeb.modules.user.dto.UserDTO;
 import hu.project.MediWeb.modules.user.dto.UserPublicDTO;
 import hu.project.MediWeb.modules.user.dto.AuthLoginResponse;
+import hu.project.MediWeb.modules.user.dto.AuthLoginRequest;
+import hu.project.MediWeb.modules.user.dto.AuthRegisterRequest;
+import jakarta.validation.Valid;
 import hu.project.MediWeb.modules.user.entity.User;
 import hu.project.MediWeb.modules.user.service.AuthService;
 import hu.project.MediWeb.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -21,6 +25,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtUtil jwtUtil;
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     public AuthController(AuthService authService, JwtUtil jwtUtil) {
@@ -35,16 +40,14 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserPublicDTO> registerUser(@RequestBody User user) {
-        User saved = authService.register(user);
+    public ResponseEntity<UserPublicDTO> registerUser(@Valid @RequestBody AuthRegisterRequest request) {
+        User saved = authService.register(request);
         return ResponseEntity.ok(UserPublicDTO.from(saved));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthLoginResponse> loginUser(@RequestBody Map<String, String> credentials) {
-        String username = credentials.get("email");
-        String password = credentials.get("password");
-        User user = authService.login(username, password);
+    public ResponseEntity<AuthLoginResponse> loginUser(@Valid @RequestBody AuthLoginRequest credentials) {
+        User user = authService.login(credentials.getEmail(), credentials.getPassword());
         String jwtToken = jwtUtil.generateJwtToken(user.getEmail());
         return ResponseEntity.ok(new AuthLoginResponse(UserPublicDTO.from(user), jwtToken, "Bearer"));
     }
@@ -56,19 +59,17 @@ public class AuthController {
             
             if (authentication != null && authentication.isAuthenticated()) {
                 String email = authentication.getName();
-                System.out.println("🔍 JWT authenticated user: " + email);
+                log.debug("auth.me user={} authenticated", email);
                 
                 User user = authService.findByEmail(email);
                 if (user != null) {
                     return ResponseEntity.ok(UserDTO.from(user));
                 }
             }
-            
-            System.out.println("❌ No valid JWT authentication found");
+            log.debug("auth.me missing valid authentication");
             return ResponseEntity.status(401).build();
         } catch (Exception e) {
-            System.err.println("/auth/me error: " + e.getMessage());
-            e.printStackTrace();
+            log.error("auth.me.error msg={}", e.getMessage(), e);
             return ResponseEntity.status(500).build();
         }
     }
