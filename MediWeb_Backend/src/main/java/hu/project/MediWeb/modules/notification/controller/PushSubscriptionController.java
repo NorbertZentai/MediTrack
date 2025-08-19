@@ -2,10 +2,13 @@ package hu.project.MediWeb.modules.notification.controller;
 
 import hu.project.MediWeb.modules.notification.entity.PushSubscription;
 import hu.project.MediWeb.modules.notification.repository.PushSubscriptionRepository;
+import hu.project.MediWeb.modules.notification.dto.PushSubscriptionRequest;
+import hu.project.MediWeb.modules.notification.dto.PushSubscriptionResponse;
 import hu.project.MediWeb.modules.user.entity.User;
 import hu.project.MediWeb.modules.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,7 +25,7 @@ public class PushSubscriptionController {
     private final UserService userService;
 
     @PostMapping("/subscribe")
-    public ResponseEntity<?> subscribe(@RequestBody PushSubscription request) {
+    public ResponseEntity<?> subscribe(@Valid @RequestBody PushSubscriptionRequest request) {
         // Get current user from JWT token in SecurityContext
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
@@ -41,8 +44,13 @@ public class PushSubscriptionController {
         }
 
         User user = userOptional.get();
-        request.setUserId(user.getId());
-        PushSubscription saved = repository.save(request);
-        return ResponseEntity.ok(saved.getId());
+    PushSubscription entity = PushSubscription.builder()
+        .userId(user.getId())
+        .endpoint(request.endpoint())
+        .p256dh(request.p256dh())
+        .auth(request.auth())
+        .build();
+    PushSubscription saved = repository.save(entity);
+    return ResponseEntity.ok(new PushSubscriptionResponse(saved.getId()));
     }
 }

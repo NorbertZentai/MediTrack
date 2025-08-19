@@ -5,6 +5,7 @@ import hu.project.MediWeb.modules.notification.dto.TodaysMedicationDTO;
 import hu.project.MediWeb.modules.notification.service.MedicationIntakeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,7 +23,7 @@ public class NotificationController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> submitIntake(@RequestBody IntakeSubmissionRequest request) {
+    public ResponseEntity<Void> submitIntake(@Valid @RequestBody IntakeSubmissionRequest request) {
         medicationIntakeService.recordIntake(request);
         return ResponseEntity.ok().build();
     }
