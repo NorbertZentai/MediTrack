@@ -11,6 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
+import hu.project.MediWeb.modules.user.dto.UpdateUsernameRequest;
+import hu.project.MediWeb.modules.user.dto.UpdateEmailRequest;
+import hu.project.MediWeb.modules.user.dto.UpdatePhoneRequest;
+import hu.project.MediWeb.modules.user.dto.CreateUserRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -37,40 +43,42 @@ public class UserController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<UserPublicDTO> getAllUsers() {
-        return userService.findAllUsers().stream().map(UserPublicDTO::from).toList();
+    return userService.findAllUsersPublic();
     }
 
     @PostMapping
-    public UserPublicDTO createUser(@RequestBody User user) {
-        return UserPublicDTO.from(userService.saveUser(user));
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserPublicDTO createUser(@Valid @RequestBody CreateUserRequest request) {
+        return UserPublicDTO.from(userService.createUserAdmin(request));
     }
 
 
     @PutMapping("/username")
-    public ResponseEntity<String> updateUsername(@RequestBody String username) {
+    public ResponseEntity<String> updateUsername(@Valid @RequestBody UpdateUsernameRequest req) {
         User user = getCurrentUser();
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Nem vagy bejelentkezve.");
         }
-        user.setName(username);
+        user.setName(req.getUsername());
         userService.saveUser(user);
-        return ResponseEntity.ok(username);
+        return ResponseEntity.ok(req.getUsername());
     }
 
     @PutMapping("/email")
-    public ResponseEntity<String> updateEmail(@RequestBody String email) {
+    public ResponseEntity<String> updateEmail(@Valid @RequestBody UpdateEmailRequest req) {
         User user = getCurrentUser();
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Nem vagy bejelentkezve.");
         }
-        user.setEmail(email);
+        user.setEmail(req.getEmail());
         userService.saveUser(user);
-        return ResponseEntity.ok(email);
+        return ResponseEntity.ok(req.getEmail());
     }
 
     @PutMapping("/password")
-    public ResponseEntity<?> updatePassword(@RequestBody PasswordChangeRequest requestBody) {
+    public ResponseEntity<?> updatePassword(@Valid @RequestBody PasswordChangeRequest requestBody) {
         User user = getCurrentUser();
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Nem vagy bejelentkezve.");
@@ -85,14 +93,14 @@ public class UserController {
     }
 
     @PutMapping("/phone")
-    public ResponseEntity<String> updatePhoneNumber(@RequestBody String phoneNumber) {
+    public ResponseEntity<String> updatePhoneNumber(@Valid @RequestBody UpdatePhoneRequest req) {
         User user = getCurrentUser();
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Nem vagy bejelentkezve.");
         }
-        user.setPhone_number(phoneNumber);
+        user.setPhone_number(req.getPhoneNumber());
         userService.saveUser(user);
-        return ResponseEntity.ok(phoneNumber);
+        return ResponseEntity.ok(req.getPhoneNumber());
     }
 
     @PutMapping("/image")
@@ -117,6 +125,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
     public UserPublicDTO updateUserRole(@PathVariable Long id, @RequestParam("role") String role) {
         return UserPublicDTO.from(userService.updateUserRole(id, UserRole.valueOf(role.toUpperCase())));
     }

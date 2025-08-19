@@ -1,6 +1,7 @@
 package hu.project.MediWeb.modules.user.entity;
 
 import hu.project.MediWeb.modules.user.enums.UserRole;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -42,6 +43,9 @@ public class User {
 
     private LocalDateTime last_login;
 
+    @Lob
+    @Basic(fetch = FetchType.LAZY)
+    @JsonIgnore // Kerüljük el, hogy a LAZY LOB mező közvetlenül szerializálódjon (HttpMessageNotWritableException)
     private byte[] profile_picture;
 
     @Enumerated(EnumType.STRING)
