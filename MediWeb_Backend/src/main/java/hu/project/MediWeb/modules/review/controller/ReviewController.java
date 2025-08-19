@@ -7,6 +7,7 @@ import hu.project.MediWeb.modules.user.entity.User;
 import hu.project.MediWeb.modules.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -25,7 +26,7 @@ public class ReviewController {
     }
 
     @PostMapping("/{itemId}")
-    public ReviewDTO submitReview(@PathVariable int itemId, @RequestBody ReviewDTO dto) {
+    public ReviewDTO submitReview(@PathVariable int itemId, @Valid @RequestBody ReviewDTO dto) {
         User user = userService.findUserById(dto.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + dto.getUserId()));
 
@@ -35,7 +36,7 @@ public class ReviewController {
     }
 
     @PutMapping("/{itemId}")
-    public ReviewDTO updateReview(@PathVariable int itemId, @RequestBody ReviewDTO dto ) {
+    public ReviewDTO updateReview(@PathVariable int itemId, @Valid @RequestBody ReviewDTO dto ) {
         User user = userService.findUserById(dto.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + dto.getUserId()));
 

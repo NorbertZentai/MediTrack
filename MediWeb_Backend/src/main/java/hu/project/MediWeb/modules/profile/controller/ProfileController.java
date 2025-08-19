@@ -17,6 +17,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import jakarta.validation.Valid;
+import hu.project.MediWeb.modules.profile.dto.ProfileCreateRequest;
+import hu.project.MediWeb.modules.profile.dto.ProfileUpdateRequest;
+import hu.project.MediWeb.modules.profile.dto.ProfileAddMedicationRequest;
+import hu.project.MediWeb.modules.profile.dto.ProfileMedicationUpdateRequest;
 import java.util.Optional;
 
 @RestController
@@ -54,17 +59,17 @@ public class ProfileController {
     }
 
     @PostMapping
-    public ResponseEntity<ProfileDTO> createProfile(@RequestBody Map<String, String> body) {
+    public ResponseEntity<ProfileDTO> createProfile(@Valid @RequestBody ProfileCreateRequest body) {
         User user = getCurrentUser();
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Profile profile = Profile.builder()
-                .user(user)
-                .name(body.get("name"))
-                .notes(body.get("notes"))
-                .build();
+    Profile profile = Profile.builder()
+        .user(user)
+        .name(body.getName())
+        .notes(body.getNotes())
+        .build();
 
         ProfileDTO created = profileService.saveProfile(profile);
         return ResponseEntity.ok(created);
@@ -76,19 +81,18 @@ public class ProfileController {
     }
 
     @PostMapping("/addMedication/{profileId}")
-    public ResponseEntity<ProfileMedicationDTO> addMedication( @PathVariable Long profileId, @RequestBody Map<String, Long> request) {
-        Long itemId = request.get("itemId");
+    public ResponseEntity<ProfileMedicationDTO> addMedication( @PathVariable Long profileId, @Valid @RequestBody ProfileAddMedicationRequest request) {
+        Long itemId = request.getItemId();
         ProfileMedicationDTO added = medicationService.addMedication(profileId, itemId);
         return ResponseEntity.ok(added);
     }
 
     @PutMapping("/{profileId}/medications/{medicationId}")
-    public ProfileMedicationDTO updateMedicationForProfile( @PathVariable Long profileId, @PathVariable Long medicationId, @RequestBody Map<String, Object> data ) {
+    public ProfileMedicationDTO updateMedicationForProfile( @PathVariable Long profileId, @PathVariable Long medicationId, @Valid @RequestBody ProfileMedicationUpdateRequest data ) {
         try {
-            String note = (String) data.get("note");
             ObjectMapper objectMapper = new ObjectMapper();
-
-            String remindersJson = objectMapper.writeValueAsString(data.get("reminders"));
+            String remindersJson = objectMapper.writeValueAsString(data.getReminders());
+            String note = data.getNote();
             return medicationService.updateMedication(profileId, medicationId, note, remindersJson);
         } catch (Exception e) {
             throw new RuntimeException("Reminders feldolgozási hiba", e);
@@ -109,8 +113,13 @@ public class ProfileController {
     }
 
     @PutMapping("/{id}")
-    public ProfileDTO updateProfile(@PathVariable Long id, @RequestBody Profile updatedProfile) {
-        return profileService.updateProfile(id, updatedProfile);
+    public ProfileDTO updateProfile(@PathVariable Long id, @Valid @RequestBody ProfileUpdateRequest updatedProfile) {
+        Profile toUpdate = Profile.builder()
+                .id(id)
+                .name(updatedProfile.getName())
+                .notes(updatedProfile.getNotes())
+                .build();
+        return profileService.updateProfile(id, toUpdate);
     }
 
     @DeleteMapping("/{id}")
