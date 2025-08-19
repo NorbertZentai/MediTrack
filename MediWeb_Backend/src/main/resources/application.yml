@@ -1,3 +1,2 @@
-spring:
-  profiles:
-    active: dev
+## Intentionally left blank to avoid forcing a default profile.
+## Activate a profile (dev, prod, test) via environment or command line.
