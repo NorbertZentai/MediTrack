@@ -74,6 +74,7 @@ application.properties
 # OS session files
 *.swp
 *.swo
+lsof
 
 # Git temporary files
 .git/
